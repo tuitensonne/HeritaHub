@@ -4,15 +4,21 @@ import { AuthSignInDto, AuthSignUpDto } from './dto/auth.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { JwtService, TokenExpiredError } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { ApiResponseService } from 'src/api-response/api-response.service';
+import { ApiResponseDto } from 'src/api-response/api-response.dto';
+import { error } from 'console';
 
 
 @Injectable()
 export class AuthService {
     constructor(private readonly prisma: PrismaService,
-                private readonly jwtService: JwtService
+                private readonly jwtService: JwtService,
+                private readonly configService: ConfigService,
+                private readonly apiResponse: ApiResponseService
     ) { }
 
-    async signin(authDto: AuthSignInDto): Promise<{ access_token: string , refresh_token: string }> {
+    async signin(authDto: AuthSignInDto): Promise<ApiResponseDto> {
         // Find user in database
         const user = await this.prisma.user.findUnique({
             where: {
@@ -20,7 +26,7 @@ export class AuthService {
             }
         })
         if (!user) {
-            throw new ForbiddenException('Credentials incorrect')
+            throw new ForbiddenException(this.apiResponse.error('Credentials incorrect', error));
         }
         // Verify password
         const passMatch = await argon.verify(
@@ -29,10 +35,8 @@ export class AuthService {
         )
 
         if (!passMatch) {
-            throw new ForbiddenException("Credentials incorrect")
+            throw new ForbiddenException(this.apiResponse.error('Credentials incorrect', error));
         }
-
-        
 
         const payload = { sub: user.ID, email: user.email }
         const access_token = await this.jwtService.signAsync(
@@ -44,13 +48,15 @@ export class AuthService {
             { expiresIn: '2h' }
         )
 
-        return {
-            access_token,
-            refresh_token
-        }
+        return this.apiResponse.success("Sign in successfully",  
+            {
+                access_token,
+                refresh_token
+            }
+        )
     }
 
-    async signup(authDto: AuthSignUpDto) {
+    async signup(authDto: AuthSignUpDto): Promise<ApiResponseDto> {
         const hash = await argon.hash(authDto.password)
 
         try {
@@ -61,22 +67,21 @@ export class AuthService {
                     password: hash,
                 }
             })
-            return user
+            return this.apiResponse.success("Sign up successfully", user)
         } catch (error) {
             console.log(error)
             if (error instanceof PrismaClientKnownRequestError) {
                 if (error.code == 'P2002')
-                    throw new ForbiddenException('Email has been used')
+                    throw new ForbiddenException(this.apiResponse.error('Email has been used', error))
             }
-            throw new Error("Error occured! Please try again");
+            throw new error
         }
-
     }
 
     async refreshToken(refreshToken: string) {
         try {
             const oldPayload = await this.jwtService.verifyAsync(refreshToken, {
-                secret: process.env.JWT_SECRET_KEY,
+                secret: this.configService.get<string>('JWT_SECRET_KEY'),
             })
             
             const {iat, exp, ...payload} = oldPayload
@@ -93,16 +98,16 @@ export class AuthService {
                 { expiresIn: '1h' }
             );
             
-            return {
+            return this.apiResponse.success("Refresh token successful", {
                 access_token,
                 refresh_token: newRefreshToken
-            };
+            });
         } catch (error) {
             console.log(error)
             if (error instanceof TokenExpiredError) {
-                throw new UnauthorizedException({statusCode: 1001, message: 'Refresh token expired', error: error}); 
+                throw new UnauthorizedException(this.apiResponse.error("Refresh Token expired"), error); 
             } else {
-                throw new InternalServerErrorException("An unexpected error occurred during refresh token");
+                throw new InternalServerErrorException(this.apiResponse.error("An unexpected error occurred during refresh token", error));
             }
         }
     }
