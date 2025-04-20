@@ -21,7 +21,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
           );
           return driver;
         } catch (error) {
-          console.error('Error connecting to Neo4j:', error);
+          console.log('Error connecting to Neo4j:', error);
           throw new Error('Failed to connect to Neo4j');
         }
       },

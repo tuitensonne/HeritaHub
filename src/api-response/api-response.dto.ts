@@ -1,7 +1,7 @@
 export class ApiResponseDto {
     status: string;
     message: string;
-    data?: any;
+    result?: any;
     error?: any;
 }
   

@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { ApiResponseService } from 'src/api-response/api-response.service';
 import { ApiResponseDto } from 'src/api-response/api-response.dto';
 import { error } from 'console';
+import { Neo4jService } from 'src/neo4j/neo4j.service';
 
 
 @Injectable()
@@ -15,7 +16,8 @@ export class AuthService {
     constructor(private readonly prisma: PrismaService,
                 private readonly jwtService: JwtService,
                 private readonly configService: ConfigService,
-                private readonly apiResponse: ApiResponseService
+                private readonly apiResponse: ApiResponseService,
+                private readonly neo4j: Neo4jService
     ) { }
 
     async signin(authDto: AuthSignInDto): Promise<ApiResponseDto> {
@@ -26,7 +28,7 @@ export class AuthService {
             }
         })
         if (!user) {
-            throw new ForbiddenException(this.apiResponse.error('Credentials incorrect', error));
+            throw new ForbiddenException(this.apiResponse.error("Can't find user"));
         }
         // Verify password
         const passMatch = await argon.verify(
@@ -35,10 +37,10 @@ export class AuthService {
         )
 
         if (!passMatch) {
-            throw new ForbiddenException(this.apiResponse.error('Credentials incorrect', error));
+            throw new ForbiddenException(this.apiResponse.error('Credentials incorrect'));
         }
 
-        const payload = { sub: user.ID, email: user.email }
+        const payload = { sub: user.id, email: user.email }
         const access_token = await this.jwtService.signAsync(
             payload,
             { expiresIn: '15m' }
@@ -58,26 +60,26 @@ export class AuthService {
 
     async signup(authDto: AuthSignUpDto): Promise<ApiResponseDto> {
         const hash = await argon.hash(authDto.password)
-
-        try {
-            const user = await this.prisma.user.create({
-                data: {
-                    username: authDto.username,
-                    email: authDto.email,
-                    password: hash,
-                }
-            })
-            return this.apiResponse.success("Sign up successfully", user)
-        } catch (error) {
-            console.log(error)
-            if (error instanceof PrismaClientKnownRequestError) {
-                if (error.code == 'P2002')
-                    throw new ForbiddenException(this.apiResponse.error('Email has been used', error))
+    
+        const prismaTransaction = await this.prisma.$transaction(async (prisma) => {
+            try {
+                const user = await prisma.user.create({
+                    data: {
+                        username: authDto.username,
+                        email: authDto.email,
+                        password: hash,
+                        date_of_birth: authDto.dob,
+                        gender: authDto.gender,
+                    }
+                })
+                const neo4jResult = await this.neo4j.createUser(user.id, user.username, authDto.avatar_url ? authDto.avatar_url: null )
+            } catch (error) {
+                throw error;
             }
-            throw new error
-        }
+        });
+        return this.apiResponse.success("Sign up successfully");
     }
-
+    
     async refreshToken(refreshToken: string) {
         try {
             const oldPayload = await this.jwtService.verifyAsync(refreshToken, {

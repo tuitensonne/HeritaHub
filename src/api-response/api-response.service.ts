@@ -4,11 +4,11 @@ import { ApiResponseDto } from './api-response.dto';
 
 @Injectable()
 export class ApiResponseService {
-  success(message: string, data: any = null): ApiResponseDto {
+  success(message: string, result: any = null): ApiResponseDto {
     return {
       status: 'success',
       message,
-      data,
+      result,
     };
   }
 

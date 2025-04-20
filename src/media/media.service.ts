@@ -7,4 +7,8 @@ export class MediaService {
   async uploadMedia(file: Express.Multer.File) {
     return await this.cloudinary.uploadImageFile(file)
   }
+
+  async deleteMedia(file_url: string) {
+    return await this.cloudinary.deleteImageByUrl(file_url)
+  }
 }
