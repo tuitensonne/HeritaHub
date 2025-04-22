@@ -8,8 +8,98 @@ datasource db {
 }
 
 model User {
-  ID        Int    @id @default(autoincrement())
-  email     String @unique @db.VarChar(100)
-  password  String @db.VarChar(100)
-  username  String @db.VarChar(100)
+  id              String      @id @default(cuid()) // Thêm: Tự động tạo ID (hoặc dùng uuid())
+  email           String      @unique @db.VarChar(150)
+  password        String      @db.VarChar(150)
+  username        String      @db.VarChar(150)
+  follower        Int         @default(0)
+  following       Int         @default(0)
+  number_of_posts Int         @default(0)
+  date_of_birth   DateTime
+  gender          User_gender
+  avatar_url      String?     @db.VarChar(255)
+  bio             String?     @db.Text
+  Post            Post[]
+}
+
+model Location {
+  id         String  @id
+  latitude   Float
+  longtitude Float
+  name       String
+  address    String
+  postId     String?
+  Post       Post?   @relation(fields: [postId], references: [id])
+
+  @@index([postId], map: "Location_postId_fkey")
+}
+
+model Media {
+  id        String     @id
+  image_url String
+  type      Media_type
+  postId    String
+  Post      Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId], map: "Media_postId_fkey")
+}
+
+model Post {
+  id             String             @id
+  title          String
+  content        String             @db.Text
+  created_at     DateTime
+  post_audience  Post_post_audience
+  like_counts    Int                @default(0)
+  comment_counts Int                @default(0)
+  userId         String
+  thumbnail_url  String?
+  Location       Location[]
+  Media          Media[]
+  User           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "Post_userId_fkey")
+}
+
+enum Media_type {
+  Video
+  Image
+}
+
+enum Post_post_audience {
+  Private
+  Public
+  Friends
+}
+
+enum User_gender {
+  Male
+  Female
+  Other
+}
+model Culture_content {
+  id          String           @id @default(cuid()) // Thêm: Tự động tạo ID (hoặc dùng uuid())
+  created_at  DateTime         @default(now())     // Thêm: Mặc định là thời điểm hiện tại
+  title       String           @db.VarChar(255)
+  description String           @db.Text
+  category    Culture_category
+  Content     Content_section[]
+
+  @@index([category], map: "Culture_content_category_idx")
+}
+model Content_section {
+  id         String   @id
+  title      String   @db.VarChar(255)
+  content    String   @db.Text
+  updated_at DateTime
+  culture_id String
+  Culture    Culture_content @relation(fields: [culture_id], references: [id], onDelete: Cascade)
+
+  @@index([culture_id], map: "Content_section_culture_id_fkey")
+}
+enum Culture_category {
+  History
+  Tradition
+  Festival
+  Cuisine
 }
