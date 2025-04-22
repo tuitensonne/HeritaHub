@@ -1,49 +1,145 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service'; // Đường dẫn đến PrismaService của bạn
-import { Culture_content } from '@prisma/client';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { Culture_content, Prisma } from '@prisma/client';
 import { CreateCultureContentDto } from './dto/culture_content.dto';
+import { ApiResponseService } from '../api-response/api-response.service';
+import { ApiResponseDto } from '../api-response/api-response.dto';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import cuid from 'cuid';
+
 @Injectable()
 export class CultureContentService {
-  // Inject PrismaService để tương tác với DB
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly apiResponse: ApiResponseService,
+  ) {}
 
-  /**
-   * Tạo mới một Culture Content trong cơ sở dữ liệu.
-   * @param createCultureContentDto Dữ liệu đầu vào từ client đã được validate.
-   * @returns Promise chứa Culture_content mới được tạo.
-   * @throws Lỗi Prisma nếu có vấn đề về CSDL (ví dụ: unique constraint).
-   */
   async create(
     createCultureContentDto: CreateCultureContentDto,
-  ): Promise<Culture_content> {
-    // eslint-disable-next-line no-useless-catch
+  ): Promise<ApiResponseDto> {
+    const { contentSections, ...mainData } = createCultureContentDto;
+
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      const newContent = await this.prisma.culture_content.create({
-        data: {
-          title: createCultureContentDto.title,
-          description: createCultureContentDto.description,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          category: createCultureContentDto.category,
-        },
+      const newContent = await this.prisma.$transaction(async (tx) => {
+        const createdCultureContent = await tx.culture_content.create({
+          data: {
+            title: mainData.title,
+            description: mainData.description,
+            category: mainData.category,
+          },
+        });
+
+        if (contentSections && contentSections.length > 0) {
+          await tx.content_section.createMany({
+            data: contentSections.map((sectionDto) => ({
+              id: cuid(),
+              title: sectionDto.title,
+              content: sectionDto.content,
+              culture_id: createdCultureContent.id,
+              updated_at: new Date(),
+            })),
+          });
+        }
+
+        return createdCultureContent;
       });
-      return newContent;
+
+      return this.apiResponse.success(
+        'Tạo Culture Content thành công',
+        newContent,
+      );
     } catch (error) {
-      throw error;
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          const target =
+            (error.meta?.target as string[])?.join(', ') || 'trường nào đó';
+          throw new ConflictException(
+            this.apiResponse.error(`Giá trị cho ${target} đã tồn tại.`),
+          );
+        }
+        console.error('Prisma Error:', error);
+        throw new InternalServerErrorException(
+          this.apiResponse.error(
+            'Lỗi CSDL khi tạo Culture Content.',
+            error.message,
+          ),
+        );
+      }
+
+      console.error('Unexpected Error:', error);
+      throw new InternalServerErrorException(
+        this.apiResponse.error(
+          'Đã xảy ra lỗi không mong muốn khi tạo Culture Content.',
+          error.message,
+        ),
+      );
     }
   }
 
-  async findOne(id: string): Promise<Culture_content> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const content = await this.prisma.culture_content.findUnique({
-      where: { id: id },
-    });
+  async findOne(id: string): Promise<ApiResponseDto> {
+    try {
+      const content = await this.prisma.culture_content.findUnique({
+        where: { id: id },
+        include: {
+          Content: true,
+        },
+      });
 
-    if (!content) {
-      throw new NotFoundException(
-        `Không tìm thấy Culture Content với ID "${id}"`,
+      if (!content) {
+        throw new NotFoundException(
+          this.apiResponse.error(
+            `Không tìm thấy Culture Content với ID "${id}"`,
+          ),
+        );
+      }
+
+      return this.apiResponse.success(
+        'Lấy thông tin Culture Content thành công',
+        content,
+      );
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      if (error instanceof Prisma.PrismaClientValidationError) {
+        throw new BadRequestException(
+          this.apiResponse.error('ID không hợp lệ.', error.message),
+        );
+      }
+      throw new InternalServerErrorException(
+        this.apiResponse.error(
+          'Lỗi khi tìm kiếm Culture Content.',
+          error.message,
+        ),
       );
     }
-    return content;
+  }
+
+  async findAll(): Promise<ApiResponseDto> {
+    try {
+      const contents = await this.prisma.culture_content.findMany({
+        include: {
+          Content: true,
+        },
+      });
+      return this.apiResponse.success(
+        'Lấy danh sách Culture Content thành công',
+        contents,
+      );
+    } catch (error) {
+      console.error('Error finding all Culture Contents:', error);
+      throw new InternalServerErrorException(
+        this.apiResponse.error(
+          'Lỗi khi lấy danh sách Culture Content.',
+          error.message,
+        ),
+      );
+    }
   }
 }

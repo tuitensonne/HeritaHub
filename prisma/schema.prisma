@@ -7,75 +7,38 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Gender {
+  Male
+  Female
+  Other
+}
+
 model User {
-  id              String      @id @default(cuid()) // Thêm: Tự động tạo ID (hoặc dùng uuid())
-  email           String      @unique @db.VarChar(150)
-  password        String      @db.VarChar(150)
-  username        String      @db.VarChar(150)
-  follower        Int         @default(0)
-  following       Int         @default(0)
-  number_of_posts Int         @default(0)
+  id              String   @id @default(uuid())
+  email           String   @unique @db.VarChar(150)
+  password        String   @db.VarChar(150)
+  username        String   @db.VarChar(150)
+  follower        Int      @default(0)
+  following       Int      @default(0)
+  number_of_posts Int      @default(0)
   date_of_birth   DateTime
-  gender          User_gender
-  avatar_url      String?     @db.VarChar(255)
-  bio             String?     @db.Text
-  Post            Post[]
+  gender          Gender
+  avatar_url      String?  @db.VarChar(255)
+  bio             String?  @db.Text()
 }
 
-model Location {
-  id         String  @id
-  latitude   Float
-  longtitude Float
-  name       String
-  address    String
-  postId     String?
-  Post       Post?   @relation(fields: [postId], references: [id])
-
-  @@index([postId], map: "Location_postId_fkey")
-}
-
-model Media {
-  id        String     @id
-  image_url String
-  type      Media_type
-  postId    String
-  Post      Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  @@index([postId], map: "Media_postId_fkey")
-}
-
-model Post {
-  id             String             @id
-  title          String
-  content        String             @db.Text
-  created_at     DateTime
-  post_audience  Post_post_audience
-  like_counts    Int                @default(0)
-  comment_counts Int                @default(0)
-  userId         String
-  thumbnail_url  String?
-  Location       Location[]
-  Media          Media[]
-  User           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId], map: "Post_userId_fkey")
-}
-
-enum Media_type {
-  Video
-  Image
-}
-
-enum Post_post_audience {
+enum Post_Audience {
   Private
   Public
   Friends
 }
 
-enum User_gender {
-  Male
-  Female
-  Other
+model Post {
+  id            String        @id @default(uuid())
+  title         String
+  content       String
+  created_at    DateTime
+  post_audience Post_Audience
 }
 model Culture_content {
   id          String           @id @default(cuid()) // Thêm: Tự động tạo ID (hoặc dùng uuid())

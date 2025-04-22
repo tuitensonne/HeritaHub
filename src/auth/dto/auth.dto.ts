@@ -1,18 +1,33 @@
-import { IsString } from "class-validator"
+import { IsDateString, IsEmail, IsEnum, IsOptional, IsString } from "class-validator"
 
+export enum Gender {
+    Male = 'Male',
+    Female = 'Female',
+    Other = 'Other',
+}
 export class AuthSignUpDto {
     @IsString()
-    username: string
-
+    username: string;
+  
+    @IsEmail()
+    email: string;
+  
     @IsString()
-    email: string
-
+    password: string;
+  
+    @IsEnum(Gender)
+    gender: Gender;
+  
+    @IsDateString()
+    dob: string;
+    
     @IsString()
-    password: string
+    @IsOptional()
+    avatar_url: string;
 }
 
 export class AuthSignInDto {
-    @IsString()
+    @IsEmail()
     email: string
 
     @IsString()
