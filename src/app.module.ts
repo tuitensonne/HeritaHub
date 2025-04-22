@@ -10,19 +10,26 @@ import { MediaModule } from './media/media.module';
 import { Neo4jModule } from './neo4j/neo4j.module';
 import { ApiResponseModule } from './api-response/api-response.module';
 import { UserModule } from './user/user.module';
+import { CultureContentModule } from './culture_content/culture_content.module';
 import { PostModule } from './post/post.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, 
+      isGlobal: true,
     }),
-    PrismaModule, 
-    EmailModule, 
-    AuthModule, 
-    CloudinaryModule, MediaModule, Neo4jModule, ApiResponseModule, UserModule, PostModule
+    PrismaModule,
+    EmailModule,
+    AuthModule,
+    CloudinaryModule,
+    MediaModule,
+    Neo4jModule,
+    ApiResponseModule,
+    UserModule,
+    CultureContentModule,
+    PostModule
   ],
-  controllers: [AppController], 
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
