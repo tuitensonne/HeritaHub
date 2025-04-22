@@ -86,7 +86,7 @@ export class UserService {
   }
 
   async followFriend(userId: string, friendId: string) {
-    const friend = await this.prisma.user.findUnique({
+    const friend = await this.prisma.user.count({
       where: { id: friendId },
     });
 
@@ -95,30 +95,22 @@ export class UserService {
     }
     try {
       const result = await this.prisma.$transaction(async (prisma) => {
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            following: {
-              increment: 1,
-            },
-          },
-        });
-
-        await prisma.user.update({
-          where: { id: friendId },
-          data: {
-            follower: {
-              increment: 1,
-            },
-          },
-        });
-
-        const neo4jResult = await this.neo4j.followUser(userId, friendId);
-
-        return neo4jResult;
+        const [userUpdate, friendUpdate] = await Promise.all([
+          prisma.user.update({
+            where: { id: userId },
+            data: { following: { increment: 1 } },
+            select: { id: true } 
+          }),
+          prisma.user.update({
+            where: { id: friendId },
+            data: { follower: { increment: 1 } },
+            select: { id: true } 
+          })
+        ]);
+        return this.neo4j.followUser(userId, friendId);
       });
-
-      return this.apiResponse.success('Follow user successfully', result);
+  
+      return this.apiResponse.success('Unfollow user successfully', result);
     } catch (error) {
       console.log('Error following user:', error);
       throw new BadRequestException(
@@ -128,44 +120,40 @@ export class UserService {
   }
 
   async unFollowFriend(userId: string, friendId: string) {
-    const friend = await this.prisma.user.findUnique({
-      where: { id: friendId },
-    });
-
-    if (!friend) {
-      throw new NotFoundException(this.apiResponse.error('User is not found'));
-    }
-
     try {
-      const result = await this.prisma.$transaction(async (prisma) => {
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            following: {
-              decrement: 1,
-            },
-          },
-        });
-
-        await prisma.user.update({
-          where: { id: friendId },
-          data: {
-            follower: {
-              decrement: 1,
-            },
-          },
-        });
-
-        const neo4jResult = await this.neo4j.unFollowUser(userId, friendId);
-
-        return neo4jResult;
+      const friendExists = await this.prisma.user.count({
+        where: { id: friendId }
       });
-
-      return this.apiResponse.success('Unfollow user successfully', result);
+  
+      if (!friendExists) {
+        throw new NotFoundException(this.apiResponse.error('User is not found'));
+      }
+      const result = await this.prisma.$transaction(async (prisma) => {
+        const [userUpdate, friendUpdate] = await Promise.all([
+          prisma.user.update({
+            where: { id: userId },
+            data: { following: { decrement: 1 } },
+            select: { id: true } 
+          }),
+          prisma.user.update({
+            where: { id: friendId },
+            data: { follower: { decrement: 1 } },
+            select: { id: true } 
+          })
+        ]);
+        return this.neo4j.unFollowUser(userId, friendId);
+      });
+  
+      return this.apiResponse.success('Follow user successfully', result);
     } catch (error) {
-      console.log('Error unfollowing user:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      
+      console.error(`Error unfollowing user: userId=${userId}, friendId=${friendId}`, error);
+      
       throw new BadRequestException(
-        this.apiResponse.error('Error happened when unfollowing user', error),
+        this.apiResponse.error('Error happened when unfollowing user', error)
       );
     }
   }

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Patch, Post, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Patch, Post, Query, Req, UploadedFile, UseGuards, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
 import { UserService } from './user.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { updateProfile } from './dto/user.dto';
@@ -6,7 +6,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('user')
 @UseGuards(AuthGuard)
-
+@UsePipes(new ValidationPipe({
+  transform: true,
+  whitelist: true,
+  transformOptions: {
+    enableImplicitConversion: true,
+  },
+}))
 export class UserController {
   constructor(private readonly userService: UserService,
   ) {}
