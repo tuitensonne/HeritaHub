@@ -25,6 +25,8 @@ model User {
   gender          Gender
   avatar_url      String?  @db.VarChar(255)
   bio             String?  @db.Text()
+
+  Post Post[]
 }
 
 enum Post_Audience {
@@ -34,11 +36,44 @@ enum Post_Audience {
 }
 
 model Post {
-  id            String        @id @default(uuid())
-  title         String
-  content       String
-  created_at    DateTime
-  post_audience Post_Audience
+  id             String        @id @default(uuid())
+  title          String
+  content        String        @db.Text
+  created_at     DateTime
+  post_audience  Post_Audience
+  like_counts    Int           @default(0)
+  comment_counts Int           @default(0)
+  thumbnail_url  String?
+
+  userId   String
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Media    Media[]
+  Location Location[]
+}
+
+enum MediaType {
+  Video
+  Image
+}
+
+model Media {
+  id        String    @id @default(uuid())
+  image_url String
+  type      MediaType
+
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Location {
+  id         String @id @default(uuid())
+  latitude   Float
+  longtitude Float
+  name       String
+  address    String
+
+  postId String?
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: SetNull)
 }
 model Culture_content {
   id          String           @id @default(cuid()) // Thêm: Tự động tạo ID (hoặc dùng uuid())

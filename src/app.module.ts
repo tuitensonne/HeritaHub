@@ -7,11 +7,12 @@ import { AuthModule } from './auth/auth.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { ConfigModule } from '@nestjs/config';
 import { MediaModule } from './media/media.module';
-import { ApiResponseService } from './api-response/api-response.service';
 import { Neo4jModule } from './neo4j/neo4j.module';
 import { ApiResponseModule } from './api-response/api-response.module';
 import { UserModule } from './user/user.module';
 import { CultureContentModule } from './culture_content/culture_content.module';
+import { PostModule } from './post/post.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +27,7 @@ import { CultureContentModule } from './culture_content/culture_content.module';
     ApiResponseModule,
     UserModule,
     CultureContentModule,
+    PostModule
   ],
   controllers: [AppController],
   providers: [AppService],

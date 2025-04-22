@@ -40,7 +40,7 @@ export class AuthService {
             throw new ForbiddenException(this.apiResponse.error('Credentials incorrect'));
         }
 
-        const payload = { sub: user.id, email: user.email }
+        const payload = { sub: user.id, username: user.username }
         const access_token = await this.jwtService.signAsync(
             payload,
             { expiresIn: '15m' }
