@@ -61,8 +61,11 @@ model Media {
   image_url String
   type      MediaType
 
-  postId String
-  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String?
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  contentSectionId String?
+  contentSection   Content_section? @relation("ContentSectionToMedia", fields: [contentSectionId], references: [id], onDelete: SetNull)
 }
 
 model Location {
@@ -75,29 +78,31 @@ model Location {
   postId String?
   post   Post?   @relation(fields: [postId], references: [id], onDelete: SetNull)
 }
+
 model Culture_content {
-  id          String           @id @default(cuid()) // Thêm: Tự động tạo ID (hoặc dùng uuid())
-  created_at  DateTime         @default(now())     // Thêm: Mặc định là thời điểm hiện tại
-  title       String           @db.VarChar(255)
-  description String           @db.Text
+  id          String            @id @default(uuid())
+  created_at  DateTime          @default(now())
+  title       String            @db.VarChar(255)
+  description String            @db.Text
   category    Culture_category
   Content     Content_section[]
 
   @@index([category], map: "Culture_content_category_idx")
 }
+
 model Content_section {
-  id         String   @id
-  title      String   @db.VarChar(255)
-  content    String   @db.Text
+  id         String          @id @default(uuid())
+  title      String          @db.VarChar(255)
+  content    String          @db.Text
   updated_at DateTime
   culture_id String
   Culture    Culture_content @relation(fields: [culture_id], references: [id], onDelete: Cascade)
 
+  Media Media[] @relation("ContentSectionToMedia") 
+
   @@index([culture_id], map: "Content_section_culture_id_fkey")
 }
+
 enum Culture_category {
-  History
-  Tradition
-  Festival
-  Cuisine
+  HistoricalSite
 }

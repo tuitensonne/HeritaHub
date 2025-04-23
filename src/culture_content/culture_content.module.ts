@@ -6,7 +6,12 @@ import { CultureContentController } from './culture_content.controller';
 import { CultureContentService } from './culture_content.service';
 
 @Module({
-  imports: [Neo4jModule, ApiResponseModule, CloudinaryModule],
+  imports: [
+    Neo4jModule, // Assuming Neo4j is still needed for other parts
+    ApiResponseModule,
+    CloudinaryModule, // Assuming Cloudinary is still needed
+    // PrismaModule, // Uncomment if PrismaService isn't global
+  ],
   controllers: [CultureContentController],
   providers: [CultureContentService],
 })

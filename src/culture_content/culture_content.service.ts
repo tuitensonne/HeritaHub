@@ -5,13 +5,13 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service'; // Ensure path is correct
 import { Culture_content, Prisma } from '@prisma/client';
 import { CreateCultureContentDto } from './dto/culture_content.dto';
-import { ApiResponseService } from '../api-response/api-response.service';
-import { ApiResponseDto } from '../api-response/api-response.dto';
+import { ApiResponseService } from '../api-response/api-response.service'; // Ensure path is correct
+import { ApiResponseDto } from '../api-response/api-response.dto'; // Ensure path is correct
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import cuid from 'cuid';
+// Removed: cuid import if not used elsewhere
 
 @Injectable()
 export class CultureContentService {
@@ -23,36 +23,23 @@ export class CultureContentService {
   async create(
     createCultureContentDto: CreateCultureContentDto,
   ): Promise<ApiResponseDto> {
-    const { contentSections, ...mainData } = createCultureContentDto;
+    // Removed destructuring of contentSections
+    // const { contentSections, ...mainData } = createCultureContentDto;
 
     try {
-      const newContent = await this.prisma.$transaction(async (tx) => {
-        const createdCultureContent = await tx.culture_content.create({
-          data: {
-            title: mainData.title,
-            description: mainData.description,
-            category: mainData.category,
-          },
-        });
-
-        if (contentSections && contentSections.length > 0) {
-          await tx.content_section.createMany({
-            data: contentSections.map((sectionDto) => ({
-              id: cuid(),
-              title: sectionDto.title,
-              content: sectionDto.content,
-              culture_id: createdCultureContent.id,
-              updated_at: new Date(),
-            })),
-          });
-        }
-
-        return createdCultureContent;
+      // Removed transaction as it's no longer needed for this simplified operation
+      const createdCultureContent = await this.prisma.culture_content.create({
+        data: {
+          title: createCultureContentDto.title,
+          description: createCultureContentDto.description,
+          category: createCultureContentDto.category,
+          // Không còn tạo contentSections ở đây nữa
+        },
       });
 
       return this.apiResponse.success(
         'Tạo Culture Content thành công',
-        newContent,
+        createdCultureContent, // Chỉ trả về Culture Content chính
       );
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
@@ -84,14 +71,18 @@ export class CultureContentService {
 
   async findOne(id: string): Promise<ApiResponseDto> {
     try {
-      const content = await this.prisma.culture_content.findUnique({
-        where: { id: id },
+      const cultureContent = await this.prisma.culture_content.findUnique({
+        where: { id },
         include: {
-          Content: true,
+          Content: {
+            include: {
+              Media: true, // lấy các media của từng content section
+            },
+          },
         },
       });
 
-      if (!content) {
+      if (!cultureContent) {
         throw new NotFoundException(
           this.apiResponse.error(
             `Không tìm thấy Culture Content với ID "${id}"`,
@@ -101,17 +92,21 @@ export class CultureContentService {
 
       return this.apiResponse.success(
         'Lấy thông tin Culture Content thành công',
-        content,
+        cultureContent,
       );
     } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
+      if (error instanceof NotFoundException) throw error;
+
       if (error instanceof Prisma.PrismaClientValidationError) {
         throw new BadRequestException(
-          this.apiResponse.error('ID không hợp lệ.', error.message),
+          this.apiResponse.error(
+            'ID không hợp lệ hoặc lỗi truy vấn.',
+            error.message,
+          ),
         );
       }
+
+      console.error('Error finding Culture Content by ID:', error);
       throw new InternalServerErrorException(
         this.apiResponse.error(
           'Lỗi khi tìm kiếm Culture Content.',
@@ -125,7 +120,10 @@ export class CultureContentService {
     try {
       const contents = await this.prisma.culture_content.findMany({
         include: {
-          Content: true,
+          Content: true, // Giữ lại include nếu bạn vẫn muốn lấy các section liên quan
+        },
+        orderBy: {
+          created_at: 'desc', // Optional: Sort by creation date if desired for the main list
         },
       });
       return this.apiResponse.success(
@@ -137,6 +135,44 @@ export class CultureContentService {
       throw new InternalServerErrorException(
         this.apiResponse.error(
           'Lỗi khi lấy danh sách Culture Content.',
+          error.message,
+        ),
+      );
+    }
+  }
+
+  // --- Mới: Service để lấy Culture Content mới nhất ---
+  async findLatest(): Promise<ApiResponseDto> {
+    try {
+      const latestContent = await this.prisma.culture_content.findFirst({
+        orderBy: {
+          created_at: 'desc', // Sắp xếp theo trường createdAt giảm dần
+        },
+        include: {
+          Content: true, // Bao gồm cả các content sections liên quan
+        },
+      });
+
+      if (!latestContent) {
+        throw new NotFoundException(
+          this.apiResponse.error(
+            'Không tìm thấy Culture Content nào trong hệ thống.',
+          ),
+        );
+      }
+
+      return this.apiResponse.success(
+        'Lấy Culture Content mới nhất thành công',
+        latestContent,
+      );
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error('Error finding latest Culture Content:', error);
+      throw new InternalServerErrorException(
+        this.apiResponse.error(
+          'Lỗi khi lấy Culture Content mới nhất.',
           error.message,
         ),
       );
