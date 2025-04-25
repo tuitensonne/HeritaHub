@@ -7,76 +7,96 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Gender {
-  Male
-  Female
-  Other
-}
-
 model User {
-  id              String   @id @default(uuid())
-  email           String   @unique @db.VarChar(150)
-  password        String   @db.VarChar(150)
-  username        String   @db.VarChar(150)
-  follower        Int      @default(0)
-  following       Int      @default(0)
-  number_of_posts Int      @default(0)
+  id              String    @id @default(uuid())
+  email           String    @unique @db.VarChar(150)
+  password        String    @db.VarChar(150)
+  username        String    @db.VarChar(150)
+  follower        Int       @default(0)
+  following       Int       @default(0)
+  number_of_posts Int       @default(0)
   date_of_birth   DateTime
   gender          Gender
-  avatar_url      String?  @db.VarChar(255)
-  bio             String?  @db.Text()
+  avatar_url      String?   @db.VarChar(255)
+  bio             String?   @db.Text
+  Comment         Comment[]
+  Post            Post[]
+  messagesSent     Chat[]        @relation("UserToChat")
+  messagesReceived Chat[]        @relation("ReceiverUser")
+  GroupMember      GroupMember[]
+}
+model Chat {
+  id         String     @id @default(uuid())
+  content    String
+  created_at DateTime   @default(now())
+  type       ChatType
+  status     ChatStatus
 
-  Post Post[]
+  sender_id String
+  sender    User   @relation("UserToChat", fields: [sender_id], references: [id])
+
+  receiver_id String?
+  receiver    User?   @relation("ReceiverUser", fields: [receiver_id], references: [id])
+
+  group_id String?
+  group    Group?  @relation(fields: [group_id], references: [id])
 }
 
-enum Post_Audience {
-  Private
-  Public
-  Friends
+model Group {
+  id         String   @id @default(uuid())
+  name       String
+  created_at DateTime @default(now())
+
+  chats   Chat[]
+  members GroupMember[]
 }
 
+model GroupMember {
+  id       String @id @default(uuid())
+  user_id  String
+  group_id String
+
+  user  User  @relation(fields: [user_id], references: [id])
+  group Group @relation(fields: [group_id], references: [id])
+}
 model Post {
-  id             String        @id @default(uuid())
+  id             String         @id @default(uuid())
   title          String
-  content        String        @db.Text
+  content        String         @db.Text
   created_at     DateTime
   post_audience  Post_Audience
-  like_counts    Int           @default(0)
-  comment_counts Int           @default(0)
+  like_counts    Int            @default(0)
+  comment_counts Int            @default(0)
+  userId         String
   thumbnail_url  String?
+  Comment        Comment[]
+  Media          Media[]
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  PostLocation   PostLocation[]
 
-  userId   String
-  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Media    Media[]
-  Location Location[]
-}
-
-enum MediaType {
-  Video
-  Image
+  @@index([userId], map: "Post_userId_fkey")
 }
 
 model Media {
-  id        String    @id @default(uuid())
-  image_url String
-  type      MediaType
-
-  postId String?
-  post   Post?   @relation(fields: [postId], references: [id], onDelete: Cascade)
-
+  id               String           @id @default(uuid())
+  image_url        String
+  type             MediaType
+  postId           String?
   contentSectionId String?
-  contentSection   Content_section? @relation("ContentSectionToMedia", fields: [contentSectionId], references: [id], onDelete: SetNull)
+  contentSection   Content_section? @relation("ContentSectionToMedia", fields: [contentSectionId], references: [id])
+  post             Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([contentSectionId], map: "Media_contentSectionId_fkey")
+  @@index([postId], map: "Media_postId_fkey")
 }
 
 model Location {
-  id         String @id @default(uuid())
-  latitude   Float
-  longtitude Float
-  name       String
-  address    String
-
-  postId String?
-  post   Post?   @relation(fields: [postId], references: [id], onDelete: SetNull)
+  id           String         @id @default(uuid())
+  latitude     Float
+  name         String
+  address      String?
+  longitude    Float
+  PostLocation PostLocation[]
 }
 
 model Culture_content {
@@ -87,7 +107,7 @@ model Culture_content {
   category    Culture_category
   Content     Content_section[]
 
-  @@index([category], map: "Culture_content_category_idx")
+  @@index([category])
 }
 
 model Content_section {
@@ -97,12 +117,62 @@ model Content_section {
   updated_at DateTime
   culture_id String
   Culture    Culture_content @relation(fields: [culture_id], references: [id], onDelete: Cascade)
-
-  Media Media[] @relation("ContentSectionToMedia") 
+  Media      Media[]         @relation("ContentSectionToMedia")
 
   @@index([culture_id], map: "Content_section_culture_id_fkey")
 }
 
+model Comment {
+  id        String   @id
+  content   String
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  Post      Post     @relation(fields: [postId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
+
+  @@index([postId], map: "Comment_postId_fkey")
+  @@index([userId], map: "Comment_userId_fkey")
+}
+
+model PostLocation {
+  postId     String
+  locationId String
+  Location   Location @relation(fields: [locationId], references: [id])
+  Post       Post     @relation(fields: [postId], references: [id])
+
+  @@id([postId, locationId])
+  @@index([locationId], map: "PostLocation_locationId_fkey")
+  @@index([postId], map: "PostLocation_postId_fkey")
+}
+
+enum Gender {
+  Male
+  Female
+  Other
+}
+
+enum Post_Audience {
+  Private
+  Public
+  Friends
+}
+
+enum MediaType {
+  Video
+  Image
+}
+
 enum Culture_category {
   HistoricalSite
+}
+enum ChatType {
+  PRIVATE
+  GROUP
+}
+
+enum ChatStatus {
+  SENT
+  DELIVERED
+  READ
 }

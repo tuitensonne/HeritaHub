@@ -13,6 +13,7 @@ import { UserModule } from './user/user.module';
 import { CultureContentModule } from './culture_content/culture_content.module';
 import { PostModule } from './post/post.module';
 import { ContentSectionModule } from './content_section/content_section.module';
+import { ChatModule } from './chat/chat.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -29,6 +30,7 @@ import { ContentSectionModule } from './content_section/content_section.module';
     CultureContentModule,
     PostModule,
     ContentSectionModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
