@@ -1,5 +1,3 @@
-// src/culture_content/culture_content.controller.ts
-
 import {
   Body,
   Controller,
@@ -9,12 +7,11 @@ import {
   UsePipes,
   ValidationPipe,
   NotFoundException,
-  Patch,
-  Delete,
 } from '@nestjs/common';
 import { CultureContentService } from './culture_content.service';
 import {
   CreateCultureContentDto,
+  // Removed: UpdateCultureContentDto (commented out in DTO file)
 } from './dto/culture_content.dto';
 
 @Controller('culture-content')
@@ -36,15 +33,14 @@ export class CultureContentController {
     return this.cultureContentService.create(createCultureContentDto);
   }
 
+  @Get('latest')
+  findLatest() {
+    return this.cultureContentService.findLatest();
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    const content = await this.cultureContentService.findOne(id);
-    if (!content) {
-      throw new NotFoundException(
-        `Không tìm thấy Culture Content với ID "${id}"`,
-      );
-    }
-    return content;
+    return this.cultureContentService.findOne(id);
   }
 
   @Get()

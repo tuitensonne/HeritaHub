@@ -12,7 +12,8 @@ import { ApiResponseModule } from './api-response/api-response.module';
 import { UserModule } from './user/user.module';
 import { CultureContentModule } from './culture_content/culture_content.module';
 import { PostModule } from './post/post.module';
-
+import { ContentSectionModule } from './content_section/content_section.module';
+import { ChatModule } from './chat/chat.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -27,7 +28,9 @@ import { PostModule } from './post/post.module';
     ApiResponseModule,
     UserModule,
     CultureContentModule,
-    PostModule
+    PostModule,
+    ContentSectionModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

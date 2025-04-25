@@ -4,8 +4,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class MediaService {
-  constructor(private readonly prisma: PrismaService) {}  
-
+  constructor(private readonly prisma: PrismaService) {}
 
   async addMedia(mediaUrl: string, mediaType: MediaType, postId: string) {
     try {
@@ -13,10 +12,30 @@ export class MediaService {
         data: {
           image_url: mediaUrl,
           type: mediaType,
-          post: { connect: { id: postId } }
-        }
+          post: { connect: { id: postId } },
+        },
       });
-      
+
+      return { success: true, mediaId: media.id };
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+  async addMediaForDocument(
+    mediaUrl: string,
+    mediaType: MediaType,
+    contentSectionId: string,
+  ) {
+    try {
+      const media = await this.prisma.media.create({
+        data: {
+          image_url: mediaUrl,
+          type: mediaType,
+          contentSection: { connect: { id: contentSectionId } },
+        },
+      });
+
       return { success: true, mediaId: media.id };
     } catch (error) {
       console.error(error);
