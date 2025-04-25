@@ -232,4 +232,41 @@ export class Neo4jService {
       await session.close();
     }
   }
+  async createGroup(
+    groupId: string,
+    groupName: string,
+    memberIds: string[],
+  ): Promise<any> {
+    const session: Session = this.driver.session();
+    try {
+      const result = await session.run(
+        `
+        CREATE (g:Group {id: $groupId, name: $groupName, createdAt: datetime()})
+        WITH g
+        UNWIND $memberIds AS memberId
+        MATCH (u:User {id: memberId})
+        CREATE (u)-[:MEMBER_OF {joinedAt: datetime()}]->(g)
+        RETURN g, COLLECT(u) AS members
+        `,
+        { groupId, groupName, memberIds },
+      );
+
+      const group = result.records[0].get('g').properties;
+      const members = result.records[0]
+        .get('members')
+        .map((record: any) => record.properties);
+
+      return {
+        id: group.id,
+        name: group.name,
+        createdAt: group.createdAt,
+        members,
+      };
+    } catch (error) {
+      console.log('Error while creating group:', error);
+      throw error;
+    } finally {
+      await session.close();
+    }
+  }
 }
