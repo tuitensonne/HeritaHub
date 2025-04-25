@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserService } from 'src/user/user.service';
 @Injectable()
 export class ChatService {
   constructor(
-    private prisma: PrismaService,
+    public prisma: PrismaService,
     private userService: UserService,
   ) {}
 
@@ -33,7 +33,7 @@ export class ChatService {
         status: 'SENT',
       },
     });
-  } 
+  }
 
   async sendGroupMessage(senderId: string, groupId: string, content: string) {
     return await this.prisma.chat.create({
@@ -145,6 +145,46 @@ export class ChatService {
       };
     });
   }
+  async getGroupConversations(userId: string) {
+    const groups = await this.prisma.group.findMany({
+      where: {
+        members: {
+          some: { user_id: userId },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        created_at: true,
+        chats: {
+          where: {
+            type: 'GROUP',
+          },
+          orderBy: {
+            created_at: 'desc',
+          },
+          take: 1,
+          select: {
+            content: true,
+            created_at: true,
+            sender_id: true,
+          },
+        },
+      },
+    });
+
+    return groups.map((group) => {
+      const lastMessage = group.chats[0];
+      return {
+        id: group.id,
+        name: group.name,
+        created_at: group.created_at,
+        lastMessage: lastMessage?.content || null,
+        lastMessageTime: lastMessage?.created_at || null,
+        fromSelf: lastMessage?.sender_id === userId,
+      };
+    });
+  }
 
   async getUserGroups(userId: string) {
     const groups = await this.prisma.group.findMany({
@@ -185,5 +225,62 @@ export class ChatService {
         fromSelf: lastMessage?.sender_id === userId,
       };
     });
+  }
+  async joinGroup(userId: string, groupId: string) {
+    const existing = await this.prisma.groupMember.findFirst({
+      where: { user_id: userId, group_id: groupId },
+    });
+
+    if (existing) {
+      throw new ForbiddenException('You are already a member of this group.');
+    }
+
+    return await this.prisma.groupMember.create({
+      data: {
+        user_id: userId,
+        group_id: groupId,
+      },
+    });
+  }
+  async createGroup(creatorId: string, groupName: string, memberIds: string[]) {
+    const creator = await this.prisma.user.findUnique({
+      where: { id: creatorId },
+    });
+    if (!creator) {
+      throw new ForbiddenException('Creator does not exist.');
+    }
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: memberIds } },
+    });
+    if (users.length !== memberIds.length) {
+      throw new ForbiddenException('One or more users do not exist.');
+    }
+    const group = await this.prisma.group.create({
+      data: {
+        name: groupName,
+        created_at: new Date(),
+      },
+    });
+    await this.prisma.groupMember.create({
+      data: {
+        user_id: creatorId,
+        group_id: group.id,
+      },
+    });
+    for (const memberId of memberIds) {
+      await this.prisma.groupMember.create({
+        data: {
+          user_id: memberId,
+          group_id: group.id,
+        },
+      });
+    }
+
+    return {
+      id: group.id,
+      name: group.name,
+      created_at: group.created_at,
+      members: [creatorId, ...memberIds],
+    };
   }
 }
