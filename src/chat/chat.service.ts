@@ -1,30 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-
+import { UserService } from 'src/user/user.service';
 @Injectable()
 export class ChatService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private userService: UserService,
+  ) {}
 
   async sendPrivateMessage(
     senderId: string,
     receiverId: string,
     content: string,
   ) {
-    const senderFollowsReceiver = await this.prisma.user.findUnique({
-      where: { id: senderId },
-      select: { following: true },
-    });
+    const isMutual = await this.userService.checkMutualFollow(
+      senderId,
+      receiverId,
+    );
 
-    const receiverFollowsSender = await this.prisma.user.findUnique({
-      where: { id: receiverId },
-      select: { following: true },
-    });
-
-    if (
-      senderFollowsReceiver?.following === 0 ||
-      receiverFollowsSender?.following === 0
-    ) {
-      throw new Error(
+    if (!isMutual) {
+      throw new ForbiddenException(
         'Both users must follow each other to send a private message.',
       );
     }
@@ -38,7 +33,7 @@ export class ChatService {
         status: 'SENT',
       },
     });
-  }
+  } 
 
   async sendGroupMessage(senderId: string, groupId: string, content: string) {
     return await this.prisma.chat.create({
