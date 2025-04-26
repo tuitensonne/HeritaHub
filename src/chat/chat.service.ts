@@ -32,7 +32,7 @@ export class ChatService {
         type: 'PRIVATE',
         status: 'SENT',
       },
-    });
+    }); 
   }
 
   async sendGroupMessage(senderId: string, groupId: string, content: string) {
@@ -148,7 +148,7 @@ export class ChatService {
   async getGroupConversations(userId: string) {
     const groups = await this.prisma.group.findMany({
       where: {
-        members: {
+        GroupMember: {
           some: { user_id: userId },
         },
       },
@@ -156,7 +156,7 @@ export class ChatService {
         id: true,
         name: true,
         created_at: true,
-        chats: {
+        Chat: {
           where: {
             type: 'GROUP',
           },
@@ -174,7 +174,7 @@ export class ChatService {
     });
 
     return groups.map((group) => {
-      const lastMessage = group.chats[0];
+      const lastMessage = group.Chat[0];
       return {
         id: group.id,
         name: group.name,
@@ -189,7 +189,7 @@ export class ChatService {
   async getUserGroups(userId: string) {
     const groups = await this.prisma.group.findMany({
       where: {
-        members: {
+        GroupMember: {
           some: { user_id: userId },
         },
       },
@@ -197,7 +197,7 @@ export class ChatService {
         id: true,
         name: true,
         created_at: true,
-        chats: {
+        Chat: {
           where: {
             type: 'GROUP',
           },
@@ -215,7 +215,7 @@ export class ChatService {
     });
 
     return groups.map((group) => {
-      const lastMessage = group.chats[0];
+      const lastMessage = group.Chat[0];
       return {
         id: group.id,
         name: group.name,
@@ -280,7 +280,7 @@ export class ChatService {
       id: group.id,
       name: group.name,
       created_at: group.created_at,
-      members: [creatorId, ...memberIds],
+      GroupMember: [creatorId, ...memberIds],
     };
   }
 }

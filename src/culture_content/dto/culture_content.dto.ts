@@ -1,6 +1,10 @@
 // src/culture_content/dto/culture_content.dto.ts
 import { IsString, IsNotEmpty, MaxLength, IsEnum } from 'class-validator';
-import { Culture_category } from '@prisma/client';
+
+export enum Culture_category {
+  HISTORICAL_SITE = 'HistoricalSite',
+}
+
 export class CreateCultureContentDto {
   @IsString({ message: 'Tiêu đề phải là một chuỗi' })
   @IsNotEmpty({ message: 'Tiêu đề không được để trống' })

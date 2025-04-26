@@ -13,7 +13,6 @@ import { UserModule } from './user/user.module';
 import { PostModule } from './post/post.module';
 import { LocationModule } from './location/location.module';
  import { CultureContentModule } from './culture_content/culture_content.module';
-import { PostModule } from './post/post.module';
 import { ContentSectionModule } from './content_section/content_section.module';
 import { ChatModule } from './chat/chat.module';
 @Module({
@@ -25,13 +24,9 @@ import { ChatModule } from './chat/chat.module';
     EmailModule,
     AuthModule,
     CloudinaryModule, 
-   
     MediaModule, 
-   
     Neo4jModule, 
-   
     ApiResponseModule, 
-   
     UserModule, 
     PostModule, 
     LocationModule,

@@ -32,7 +32,7 @@ export class MediaService {
         data: {
           image_url: mediaUrl,
           type: mediaType,
-          contentSection: { connect: { id: contentSectionId } },
+          Content_section: { connect: { id: contentSectionId } },
         },
       });
 

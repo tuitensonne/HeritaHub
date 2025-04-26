@@ -4,7 +4,6 @@ import { Driver, Session } from 'neo4j-driver';
 @Injectable()
 export class Neo4jService {
   constructor(@Inject('NEO4J_DRIVER') private readonly driver: Driver) {}
-  constructor(@Inject('NEO4J_DRIVER') private readonly driver: Driver) {}
 
   async getFriends(personId: number): Promise<any[]> {
       const session: Session = this.driver.session();

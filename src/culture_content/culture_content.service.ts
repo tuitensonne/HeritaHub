@@ -74,7 +74,7 @@ export class CultureContentService {
       const cultureContent = await this.prisma.culture_content.findUnique({
         where: { id },
         include: {
-          Content: {
+          Content_section: {
             include: {
               Media: true, // lấy các media của từng content section
             },
@@ -120,7 +120,7 @@ export class CultureContentService {
     try {
       const contents = await this.prisma.culture_content.findMany({
         include: {
-          Content: true, // Giữ lại include nếu bạn vẫn muốn lấy các section liên quan
+          Content_section: true, // Giữ lại include nếu bạn vẫn muốn lấy các section liên quan
         },
         orderBy: {
           created_at: 'desc', // Optional: Sort by creation date if desired for the main list
@@ -149,7 +149,7 @@ export class CultureContentService {
           created_at: 'desc', // Sắp xếp theo trường createdAt giảm dần
         },
         include: {
-          Content: true, // Bao gồm cả các content sections liên quan
+          Content_section: true, // Bao gồm cả các content sections liên quan
         },
       });
 
