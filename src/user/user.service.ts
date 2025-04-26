@@ -120,38 +120,42 @@ export class UserService {
   }
 
   async unFollowFriend(userId: string, friendId: string) {
+    const friend = await this.prisma.user.findUnique({
+      where: { id: friendId },
+    });
+
+    if (!friend) {
+      throw new NotFoundException(this.apiResponse.error('User is not found'));
+    }
+
     try {
-      const friendExists = await this.prisma.user.count({
-        where: { id: friendId }
-      });
-  
-      if (!friendExists) {
-        throw new NotFoundException(this.apiResponse.error('User is not found'));
-      }
       const result = await this.prisma.$transaction(async (prisma) => {
-        const [userUpdate, friendUpdate] = await Promise.all([
-          prisma.user.update({
-            where: { id: userId },
-            data: { following: { decrement: 1 } },
-            select: { id: true } 
-          }),
-          prisma.user.update({
-            where: { id: friendId },
-            data: { follower: { decrement: 1 } },
-            select: { id: true } 
-          })
-        ]);
-        return this.neo4j.unFollowUser(userId, friendId);
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            following: {
+              decrement: 1,
+            },
+          },
+        });
+
+        await prisma.user.update({
+          where: { id: friendId },
+          data: {
+            follower: {
+              decrement: 1,
+            },
+          },
+        });
+
+        const neo4jResult = await this.neo4j.unFollowUser(userId, friendId);
+
+        return neo4jResult;
       });
-  
-      return this.apiResponse.success('Follow user successfully', result);
+
+      return this.apiResponse.success('Unfollow user successfully', result);
     } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      
-      console.error(`Error unfollowing user: userId=${userId}, friendId=${friendId}`, error);
-      
+      console.log('Error unfollowing user:', error);
       throw new BadRequestException(
         this.apiResponse.error('Error happened when unfollowing user', error)
       );
@@ -196,10 +200,18 @@ export class UserService {
         },
       }),
     ]);
-  
+
     if (user) {
       user['isFollowing'] = isFollowing;
     }
-    return this.apiResponse.success("Successfully", user);
-  }  
+    return this.apiResponse.success('Successfully', user);
+  }
+  async checkMutualFollow(userId1: string, userId2: string): Promise<boolean> {
+    const [user1FollowsUser2, user2FollowsUser1] = await Promise.all([
+      this.neo4j.checkFollow(userId1, userId2),
+      this.neo4j.checkFollow(userId2, userId1),
+    ]);
+
+    return user1FollowsUser2 && user2FollowsUser1;
+  }
 }
