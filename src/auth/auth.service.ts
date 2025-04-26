@@ -2,12 +2,10 @@ import { ForbiddenException, Injectable, InternalServerErrorException, Unauthori
 import * as argon from 'argon2'
 import { AuthSignInDto, AuthSignUpDto } from './dto/auth.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { JwtService, TokenExpiredError } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { ApiResponseService } from 'src/api-response/api-response.service';
 import { ApiResponseDto } from 'src/api-response/api-response.dto';
-import { error } from 'console';
 import { Neo4jService } from 'src/neo4j/neo4j.service';
 
 
@@ -40,7 +38,7 @@ export class AuthService {
             throw new ForbiddenException(this.apiResponse.error('Credentials incorrect'));
         }
 
-        const payload = { sub: user.id, email: user.email }
+        const payload = { sub: user.id, username: user.username, url: user.avatar_url }
         const access_token = await this.jwtService.signAsync(
             payload,
             { expiresIn: '15m' }
