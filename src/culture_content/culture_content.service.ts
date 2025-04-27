@@ -84,7 +84,7 @@ export class CultureContentService {
         include: {
           Content_section: {
             include: {
-              Media: true, // lấy các media của từng content section
+              Media: true,
             },
           },
         },
@@ -185,38 +185,39 @@ export class CultureContentService {
       );
     }
   }
-
   async getCultureContentByImage(file: Express.Multer.File) {
     try {
       const IMAGE_SEARCH = this.configService.get<string>('IMAGE_SEARCH');
-
+      
+      // Kiểm tra URL
+      if (!IMAGE_SEARCH) {
+        throw new Error('IMAGE_SEARCH URL is not configured');
+      }
+      
       const formData = new FormData();
       formData.append('file', file.buffer, {
         filename: file.originalname,
         contentType: file.mimetype,
       });
-
+  
       const response = await lastValueFrom(
         this.httpService.post(
-          IMAGE_SEARCH || '',
+          IMAGE_SEARCH,
           formData,
           {
             headers: {
-              ...formData.getHeaders(), 
+              'Content-Type': 'multipart/form-data',
             },
           }
         )
       );
-
       const result = response.data;
-
-      return this.apiResponse.success('Image search successfully', 
-        result
-      );
+  
+      return this.apiResponse.success('Image search successfully', result);
     } catch (error) {
-      console.error(error);
+      console.error('Error details:', error.response?.status, error.response?.data || error.message);
       throw new InternalServerErrorException(
-        this.apiResponse.error('Error in image search', error)
+        this.apiResponse.error('Error in image search', error) 
       );
     }
   }

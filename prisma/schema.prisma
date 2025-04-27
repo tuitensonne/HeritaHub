@@ -8,22 +8,60 @@ datasource db {
 }
 
 model User {
-  id                          String        @id @default(uuid())
-  email                       String        @unique @db.VarChar(150)
-  password                    String        @db.VarChar(150)
-  username                    String        @db.VarChar(150)
-  follower                    Int           @default(0)
-  following                   Int           @default(0)
-  number_of_posts             Int           @default(0)
-  date_of_birth               DateTime
-  gender                      Gender
-  avatar_url                  String?       @db.VarChar(255)
-  bio                         String?       @db.Text
-  Chat_Chat_receiver_idToUser Chat[]        @relation("Chat_receiver_idToUser")
-  Chat_Chat_sender_idToUser   Chat[]        @relation("Chat_sender_idToUser")
-  Comment                     Comment[]
-  GroupMember                 GroupMember[]
-  Post                        Post[]
+  id               String         @id @default(uuid())
+  email            String         @unique @db.VarChar(150)
+  password         String         @db.VarChar(150)
+  username         String         @db.VarChar(150)
+  follower         Int            @default(0)
+  following        Int            @default(0)
+  number_of_posts  Int            @default(0)
+  date_of_birth    DateTime
+  gender           Gender
+  avatar_url       String?        @db.VarChar(255)
+  bio              String?        @db.Text
+  messagesReceived Chat[]         @relation("ReceiverUser")
+  messagesSent     Chat[]         @relation("UserToChat")
+  Comment          Comment[]
+  GroupMember      GroupMember[]
+  Post             Post[]
+  Notification     Notification[]
+}
+
+model Chat {
+  id          String      @id @default(uuid())
+  content     String
+  created_at  DateTime    @default(now())
+  type        Chat_type
+  status      Chat_status
+  sender_id   String
+  receiver_id String?
+  group_id    String?
+  group       Group?      @relation(fields: [group_id], references: [id])
+  receiver    User?       @relation("ReceiverUser", fields: [receiver_id], references: [id])
+  sender      User        @relation("UserToChat", fields: [sender_id], references: [id])
+
+  @@index([group_id], map: "Chat_group_id_fkey")
+  @@index([receiver_id], map: "Chat_receiver_id_fkey")
+  @@index([sender_id], map: "Chat_sender_id_fkey")
+}
+
+model Group {
+  id         String        @id @default(uuid())
+  name       String
+  created_at DateTime      @default(now())
+  chats      Chat[]
+  members    GroupMember[]
+}
+
+model GroupMember {
+  id       String @id @default(uuid())
+  user_id  String
+  group_id String
+  group    Group  @relation(fields: [group_id], references: [id])
+  user     User   @relation(fields: [user_id], references: [id])
+
+  @@index([group_id], map: "GroupMember_group_id_fkey")
+  @@index([user_id], map: "GroupMember_user_id_fkey")
 }
 
 model Post {
@@ -34,17 +72,16 @@ model Post {
   post_audience  Post_Audience
   like_counts    Int           @default(0)
   comment_counts Int           @default(0)
+  userId         String
   thumbnail_url  String?
-  locationId     String? // Thêm dòng này
+  locationId     String?
   Comment        Comment[]
   Media          Media[]
-  userId         String
+  location       Location?     @relation(fields: [locationId], references: [id], onDelete: Cascade)
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  location Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
-
   @@index([userId], map: "Post_userId_fkey")
-  @@index([locationId], map: "Post_locationId_fkey") // Thêm dòng này để tạo index
+  @@index([locationId], map: "Post_locationId_fkey")
 }
 
 model Comment {
@@ -75,14 +112,13 @@ model Media {
 }
 
 model Location {
-  id        String  @id @default(uuid())
-  latitude  Float
-  name      String
-  address   String?
-  longitude Float
-
-  posts           Post[]
+  id              String           @id @default(uuid())
+  latitude        Float
+  name            String
+  address         String?
+  longitude       Float
   culture_content Culture_content? @relation("LocationToCultureContent")
+  posts           Post[]
 }
 
 model Content_section {
@@ -103,50 +139,25 @@ model Culture_content {
   title           String                   @db.VarChar(255)
   description     String                   @db.Text
   category        Culture_content_category
+  location_id     String                   @unique
   Content_section Content_section[]
-
-  location_id String   @unique
-  location    Location @relation("LocationToCultureContent", fields: [location_id], references: [id])
+  location        Location                 @relation("LocationToCultureContent", fields: [location_id], references: [id])
 
   @@index([category])
   @@index([location_id], map: "Culture_content_location_id_fkey")
 }
 
-model Chat {
-  id                          String      @id @default(uuid())
-  content                     String
-  created_at                  DateTime    @default(now())
-  type                        Chat_type
-  status                      Chat_status
-  sender_id                   String
-  receiver_id                 String?
-  group_id                    String?
-  Group                       Group?      @relation(fields: [group_id], references: [id])
-  User_Chat_receiver_idToUser User?       @relation("Chat_receiver_idToUser", fields: [receiver_id], references: [id])
-  User_Chat_sender_idToUser   User        @relation("Chat_sender_idToUser", fields: [sender_id], references: [id])
+model Notification {
+  NID         String   @id @default(uuid())
+  message     String
+  dateCreated DateTime
+  isRead      Boolean  @default(false)
+  type        String
 
-  @@index([group_id], map: "Chat_group_id_fkey")
-  @@index([receiver_id], map: "Chat_receiver_id_fkey")
-  @@index([sender_id], map: "Chat_sender_id_fkey")
-}
+  user   User   @relation(fields: [userID], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userID String
 
-model Group {
-  id          String        @id @default(uuid())
-  name        String
-  created_at  DateTime      @default(now())
-  Chat        Chat[]
-  GroupMember GroupMember[]
-}
-
-model GroupMember {
-  id       String @id @default(uuid())
-  user_id  String
-  group_id String
-  Group    Group  @relation(fields: [group_id], references: [id])
-  User     User   @relation(fields: [user_id], references: [id])
-
-  @@index([group_id], map: "GroupMember_group_id_fkey")
-  @@index([user_id], map: "GroupMember_user_id_fkey")
+  @@index([userID], map: "Notification_user_id_fkey")
 }
 
 enum Gender {

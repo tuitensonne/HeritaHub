@@ -126,7 +126,8 @@ export class PostService {
   async commentToPost(userId: string, postId: string, content: string) {
     try {
       const VIET_SPAM_HOST = this.configService.get<string>('VIET_SPAM_HOST');
-      // const ENGLIST_SPAM_HOST = this.configService.get<string>('ENGLIST_SPAM_HOST');
+      console.log(VIET_SPAM_HOST)
+      // const ENGLISH_SPAM_HOST = this.configService.get<string>('ENGLISH_SPAM_HOST');
       let response = await lastValueFrom(
         this.httpService.post(VIET_SPAM_HOST || '', {
             comment: content
@@ -134,17 +135,19 @@ export class PostService {
       );
       // if (response.data.result !== -1) {
       //   response = await lastValueFrom(
-      //     this.httpService.post(`${ENGLIST_SPAM_HOST}?comment=${content}` || '', {
+      //     this.httpService.post(`${ENGLISH_SPAM_HOST}?comment=${content}` || '', {
       //         comment: content
       //     })
       //   );
       // }
-        await this.prisma.post.update({
-          where: { id: postId },
-          data: {
-            comment_counts: { increment: 1 },
-          },
-        });
+        if (response.data.result !== -1) {
+          await this.prisma.post.update({
+            where: { id: postId },
+            data: {
+              comment_counts: { increment: 1 }, 
+            },
+          });
+        }
         const comment = await this.prisma.comment.create({
           data: {
             content,
@@ -205,18 +208,21 @@ export class PostService {
       const comments = await this.prisma.comment.findMany({
         where: {
           postId: postId,
+          state: {
+            not: -1,  // Điều kiện lọc để chỉ lấy comment có state khác -1
+          },
         },
         skip: (pageOffset - 1) * limit,
         take: limit,
         orderBy: {
-          createdAt: 'desc', 
+          createdAt: 'desc',
         },
         include: {
           user: {
             select: {
               id: true,
               username: true,
-              avatar_url: true, 
+              avatar_url: true,
             },
           },
         },
@@ -225,6 +231,9 @@ export class PostService {
       const totalComments = await this.prisma.comment.count({
         where: {
           postId: postId,
+          state: {
+            not: -1,  // Lọc lại trong count cũng phải có điều kiện state khác -1
+          },
         },
       });
   
@@ -253,7 +262,7 @@ export class PostService {
       console.error(error);
       throw new InternalServerErrorException(this.apiResonponse.error("Error in getting comments", error));
     }
-  }
+  }  
   
   async deleteAPost(postId: string) {
     try {
@@ -282,8 +291,12 @@ export class PostService {
 
   async getUserFeedPost(userId: string, page: number, limit: number) {
     const followingFriends = await this.neo4jService.getFollowing(userId, userId);
-    
-    const followingIds = followingFriends.map(friend => friend.id);
+  
+    const followingIds = [
+      ...followingFriends.map(friend => friend.id),
+      userId, // thêm chính userId vào đây
+    ];
+  
     const posts = await this.prisma.post.findMany({
       where: {
         userId: {
@@ -307,9 +320,9 @@ export class PostService {
       ...post,
       username: post.user.username,
       avatar_url: post.user.avatar_url,
-      user: undefined 
+      user: undefined
     }));
   
     return this.apiResonponse.success("Get Feed", postsWithUserInfo);
-  }
+  }  
 }

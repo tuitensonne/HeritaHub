@@ -33,9 +33,9 @@ export class ChatController {
     return this.chatService.getPrivateConversations(userId);
   }
 
-  @Get('conversations/group')
-  async getGroupConversations(@Req() req) {
-    return this.chatService.getGroupConversations(req.user.id);
+  @Get('conversations/group/:userId')
+  async getGroupConversations(@Param('userId') userId: string) {
+    return this.chatService.getGroupConversations(userId);
   }
 
   @Get('groups/:userId')

@@ -43,9 +43,10 @@ export class UserService {
           secure_url: string;
           public_id: string;
         };
-        const neo4jUser = await this.neo4j.updateProfileAvatar(
+        const neo4jUser = await this.neo4j.updateProfile(
           userId,
           uploadResult.secure_url,
+          updateProfileDTO.username
         );
       }
       const updatedUser = await this.prisma.user.update({

@@ -59,8 +59,20 @@ export class ChatService {
       select: {
         id: true,
         content: true,
-        sender_id: true,
-        receiver_id: true,
+        sender: {
+          select: {
+            id: true,
+            username: true,
+            avatar_url: true,
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            username: true,
+            avatar_url: true,
+          },
+        },
         created_at: true,
         type: true,
         status: true,
@@ -75,8 +87,20 @@ export class ChatService {
       select: {
         id: true,
         content: true,
-        sender_id: true,
-        receiver_id: true,
+        sender: {
+          select: {
+            id: true,
+            username: true,
+            avatar_url: true,
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            username: true,
+            avatar_url: true,
+          },
+        },
         created_at: true,
         type: true,
         status: true,
@@ -148,7 +172,7 @@ export class ChatService {
   async getGroupConversations(userId: string) {
     const groups = await this.prisma.group.findMany({
       where: {
-        GroupMember: {
+        members: {
           some: { user_id: userId },
         },
       },
@@ -156,7 +180,7 @@ export class ChatService {
         id: true,
         name: true,
         created_at: true,
-        Chat: {
+        chats: {
           where: {
             type: 'GROUP',
           },
@@ -174,7 +198,7 @@ export class ChatService {
     });
 
     return groups.map((group) => {
-      const lastMessage = group.Chat[0];
+      const lastMessage = group.chats[0];
       return {
         id: group.id,
         name: group.name,
@@ -189,7 +213,7 @@ export class ChatService {
   async getUserGroups(userId: string) {
     const groups = await this.prisma.group.findMany({
       where: {
-        GroupMember: {
+        members: {
           some: { user_id: userId },
         },
       },
@@ -197,7 +221,7 @@ export class ChatService {
         id: true,
         name: true,
         created_at: true,
-        Chat: {
+        chats: {
           where: {
             type: 'GROUP',
           },
@@ -215,7 +239,7 @@ export class ChatService {
     });
 
     return groups.map((group) => {
-      const lastMessage = group.Chat[0];
+      const lastMessage = group.chats[0];
       return {
         id: group.id,
         name: group.name,

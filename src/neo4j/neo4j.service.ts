@@ -72,26 +72,41 @@ export class Neo4jService {
       }
   }
 
-  async updateProfileAvatar(userId: string, avatar_url: string) {
-      const session: Session = this.driver.session();
-      try {
-        const result = await session.run(
-          `
-          MATCH (u:User {id: $id})
-          SET u.avatar_url = $avatar_url
-          RETURN u
-          `,
-          { id: userId, avatar_url }
-        );
-    
-        return result.records[0]?.get("u");  
-      } catch (error) {
-        console.log('Error while updating avatar_url:', error);
-        throw error;
-      } finally {
-        await session.close();
+  async updateProfile(userId: string, avatar_url?: string, name?: string) {
+    const session: Session = this.driver.session();
+    try {
+      const setClauses: string[] = [];
+      const params: any = { id: userId };
+  
+      if (avatar_url !== undefined) {
+        setClauses.push('u.avatar_url = $avatar_url');
+        params.avatar_url = avatar_url;
       }
-  }
+  
+      if (name !== undefined) {
+        setClauses.push('u.name = $name');
+        params.name = name;
+      }
+  
+      if (setClauses.length === 0) {
+        throw new Error('No fields to update');
+      }
+  
+      const query = `
+        MATCH (u:User {id: $id})
+        SET ${setClauses.join(', ')}
+        RETURN u
+      `;
+  
+      const result = await session.run(query, params);
+      return result.records[0]?.get("u");  
+    } catch (error) {
+      console.log('Error while updating profile:', error);
+      throw error;
+    } finally {
+      await session.close();
+    }
+  }  
 
   async getFollowing(userId: string, friendId: string) {
       const session: Session = this.driver.session();
