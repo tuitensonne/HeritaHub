@@ -59,8 +59,20 @@ export class ChatService {
       select: {
         id: true,
         content: true,
-        sender_id: true,
-        receiver_id: true,
+        sender: {
+          select: {
+            id: true,
+            username: true,
+            avatar_url: true,
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            username: true,
+            avatar_url: true,
+          },
+        },
         created_at: true,
         type: true,
         status: true,
@@ -75,8 +87,20 @@ export class ChatService {
       select: {
         id: true,
         content: true,
-        sender_id: true,
-        receiver_id: true,
+        sender: {
+          select: {
+            id: true,
+            username: true,
+            avatar_url: true,
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            username: true,
+            avatar_url: true,
+          },
+        },
         created_at: true,
         type: true,
         status: true,

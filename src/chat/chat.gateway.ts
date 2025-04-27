@@ -87,7 +87,6 @@ export class ChatGateway
         select: { user_id: true },
       });
 
-      // Phát tin nhắn đến tất cả thành viên nhóm
       groupMembers.forEach((member) => {
         this.server.to(member.user_id).emit('new_group_message', message);
       });
@@ -178,19 +177,19 @@ export class ChatGateway
     },
   ) {
     try {
-      // Gọi ChatService để tạo nhóm
       const group = await this.chatService.createGroup(
         data.creatorId,
         data.groupName,
         data.memberIds,
       );
 
-      // Thông báo đến tất cả thành viên nhóm (bao gồm người tạo)
       const allMembers = [data.creatorId, ...data.memberIds];
       allMembers.forEach((userId) => {
         this.server.to(userId).emit('group_created', group);
       });
-
+      this.logger.log(
+        `Nhóm được tạo: ${group.id} bởi người dùng ${data.creatorId}`,
+      );
       return group;
     } catch (error) {
       this.logger.error(`Lỗi khi tạo nhóm: ${error.message}`);
