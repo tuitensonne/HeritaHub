@@ -85,4 +85,10 @@ export class UserController {
     return this.userService.updateProfile(req.user.sub, userDTO, file)
   }
 
+  @Get() 
+  async search(
+    @Query("key") key: string
+  ) {
+    return this.userService.search(key)
+  }
 }

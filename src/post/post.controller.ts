@@ -34,6 +34,15 @@ export class PostController {
   ) {
     return this.postService.getUserPosts(req.user.sub, id, page, limit);
   }
+  
+  @Get('feed')
+  getUserFeedPost(
+    @Req() req,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 5,
+  ) {
+    return this.postService.getUserFeedPost(req.user.sub, page, limit);
+  }
 
   @Patch(':id')
   update(
@@ -75,6 +84,13 @@ export class PostController {
     @Query('limit') limit: number = 10,
   ) {
     return this.postService.getCommentByPostId(postId, page, limit);
+  }
+
+  @Get(':id/images') 
+  getImageByPostId( 
+    @Param('id') postId: string,
+  ) {
+    return this.postService.getImageByPostId(postId);
   }
 
   @Delete(':id')

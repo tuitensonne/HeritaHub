@@ -37,7 +37,7 @@ export class LocationService {
         name: string;
         latitude: number;
         longitude: number;
-        address: string;
+        address: string | null;
         post_count: bigint;
         distance: number;
       }>>(`
@@ -47,7 +47,7 @@ export class LocationService {
           l.latitude,
           l.longitude,
           l.address,
-          COUNT(pl.postId) AS post_count,
+          COUNT(p.id) AS post_count,
           (
             6371 * ACOS(
               COS(RADIANS(${latitude})) * COS(RADIANS(l.latitude)) *
@@ -56,7 +56,7 @@ export class LocationService {
             )
           ) AS distance
         FROM Location l
-        LEFT JOIN PostLocation pl ON l.id = pl.locationId
+        LEFT JOIN Post p ON p.locationId = l.id
         GROUP BY l.id, l.name, l.latitude, l.longitude, l.address
         ORDER BY distance ASC, post_count DESC
         LIMIT ${limit}
@@ -66,7 +66,7 @@ export class LocationService {
       const locations = locationsRaw.map(location => ({
         ...location,
         post_count: Number(location.post_count),
-        distance: Number(location.distance)
+        distance: Number(location.distance),
       }));
   
       return this.apiResponse.success("Locations fetched successfully", locations);
@@ -74,5 +74,5 @@ export class LocationService {
       console.error('Error fetching locations:', error);
       throw new InternalServerErrorException('Failed to fetch locations');
     }
-  }
+  }  
 }

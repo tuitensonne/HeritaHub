@@ -4,25 +4,6 @@ import { Driver, Session } from 'neo4j-driver';
 @Injectable()
 export class Neo4jService {
   constructor(@Inject('NEO4J_DRIVER') private readonly driver: Driver) {}
-
-  async getFriends(personId: number): Promise<any[]> {
-      const session: Session = this.driver.session();
-      try {
-          const result = await session.run(
-              `MATCH (p:Person {id: $id})-[r:ADD_FRIEND]->(friend:Person)
-              RETURN friend`,
-              { id: personId } 
-          );
-  
-          const friends = result.records.map(record => record.get('friend').properties);
-          return friends;  
-      } catch (error) {
-          console.log('Error while getting friends:', error);
-          throw error;
-      } finally {
-          await session.close();  
-      }
-  }
   
   async followUser(followingUserId: string, followedUserId: string) {
       const session: Session = this.driver.session();
@@ -39,6 +20,22 @@ export class Neo4jService {
       } finally {
           await session.close();  
       }
+  }
+
+  async checkFollow(userId: string, targetId: string): Promise<boolean> {
+    const session = this.driver.session();
+    try {
+      const result = await session.run(
+        `
+        MATCH (u:User {id: $userId})-[f:FOLLOWS]->(t:User {id: $targetId})
+        RETURN COUNT(f) > 0 AS isFollowing
+        `,
+        { userId, targetId },
+      );
+      return result.records[0]?.get('isFollowing') ?? false;
+    } finally {
+      await session.close();
+    }
   }
 
   async unFollowUser(followingUserId: string, followedUserId: string) {

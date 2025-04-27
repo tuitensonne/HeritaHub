@@ -30,7 +30,7 @@ export class UserService {
       );
     return this.apiResponse.success('Get profile successful', user);
   }
-
+  
   async updateProfile(
     userId: string,
     updateProfileDTO: updateProfile,
@@ -202,6 +202,7 @@ export class UserService {
     }
     return this.apiResponse.success('Successfully', user);
   }
+  
   async checkMutualFollow(userId1: string, userId2: string): Promise<boolean> {
     const [user1FollowsUser2, user2FollowsUser1] = await Promise.all([
       this.neo4j.checkFollow(userId1, userId2),
@@ -210,4 +211,51 @@ export class UserService {
 
     return user1FollowsUser2 && user2FollowsUser1;
   }
+
+  async search(rawKey: string) {
+    const key = rawKey.trim();
+    if (!key) {
+      console.log('Key rỗng, không tìm');
+      return this.apiResponse.success("Search successfully", []);
+    }
+
+    const [users, locations] = await Promise.all([
+      this.prisma.user.findMany({
+        where: {
+          username: {
+            contains: key,
+          }
+        },
+        select: {
+          id: true,
+          username: true
+        }
+      }),
+      this.prisma.culture_content.findMany({
+        where: {
+          title: {
+            contains: key,
+          }
+        },
+        select: {
+          location_id: true,
+          title: true
+        }
+      })
+    ]);
+  
+    const usersWithType = users.map(u => ({
+      id: u.id,
+      name: u.username, 
+      type: 'user'
+    }));
+  
+    const locationsWithType = locations.map(l => ({
+      id: l.location_id,
+      name: l.title,      
+      type: 'place'
+    }));
+  
+    return this.apiResponse.success("Search successfully", [...usersWithType, ...locationsWithType]);
+  }  
 }

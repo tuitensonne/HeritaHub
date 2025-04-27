@@ -27,21 +27,24 @@ model User {
 }
 
 model Post {
-  id             String         @id @default(uuid())
+  id             String        @id @default(uuid())
   title          String
-  content        String         @db.Text
+  content        String        @db.Text
   created_at     DateTime
   post_audience  Post_Audience
-  like_counts    Int            @default(0)
-  comment_counts Int            @default(0)
-  userId         String
+  like_counts    Int           @default(0)
+  comment_counts Int           @default(0)
   thumbnail_url  String?
+  locationId     String? // Thêm dòng này
   Comment        Comment[]
   Media          Media[]
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  PostLocation   PostLocation[]
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  location Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
   @@index([userId], map: "Post_userId_fkey")
+  @@index([locationId], map: "Post_locationId_fkey") // Thêm dòng này để tạo index
 }
 
 model Comment {
@@ -72,23 +75,14 @@ model Media {
 }
 
 model Location {
-  id           String         @id @default(uuid())
-  latitude     Float
-  name         String
-  address      String?
-  longitude    Float
-  PostLocation PostLocation[]
-}
+  id        String  @id @default(uuid())
+  latitude  Float
+  name      String
+  address   String?
+  longitude Float
 
-model PostLocation {
-  postId     String
-  locationId String
-  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  @@id([postId, locationId])
-  @@index([postId], map: "PostLocation_postId_fkey")
-  @@index([locationId], map: "PostLocation_locationId_fkey")
+  posts           Post[]
+  culture_content Culture_content? @relation("LocationToCultureContent")
 }
 
 model Content_section {
@@ -111,7 +105,11 @@ model Culture_content {
   category        Culture_content_category
   Content_section Content_section[]
 
+  location_id String   @unique
+  location    Location @relation("LocationToCultureContent", fields: [location_id], references: [id])
+
   @@index([category])
+  @@index([location_id], map: "Culture_content_location_id_fkey")
 }
 
 model Chat {

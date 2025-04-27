@@ -6,11 +6,14 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service'; // Ensure path is correct
-import { Culture_content, Prisma } from '@prisma/client';
-import { CreateCultureContentDto } from './dto/culture_content.dto';
 import { ApiResponseService } from '../api-response/api-response.service'; // Ensure path is correct
 import { ApiResponseDto } from '../api-response/api-response.dto'; // Ensure path is correct
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
+import { lastValueFrom } from 'rxjs';
+import * as FormData from 'form-data';
+import { Readable } from 'stream';
+import { PrismaClientValidationError } from '@prisma/client/runtime/library';
 // Removed: cuid import if not used elsewhere
 
 @Injectable()
@@ -18,61 +21,66 @@ export class CultureContentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly apiResponse: ApiResponseService,
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService
   ) {}
 
-  async create(
-    createCultureContentDto: CreateCultureContentDto,
-  ): Promise<ApiResponseDto> {
-    // Removed destructuring of contentSections
-    // const { contentSections, ...mainData } = createCultureContentDto;
+  // async create(
+  //   createCultureContentDto: CreateCultureContentDto,
+  // ): Promise<ApiResponseDto> {
+  //   // Removed destructuring of contentSections
+  //   // const { contentSections, ...mainData } = createCultureContentDto;
 
-    try {
-      // Removed transaction as it's no longer needed for this simplified operation
-      const createdCultureContent = await this.prisma.culture_content.create({
-        data: {
-          title: createCultureContentDto.title,
-          description: createCultureContentDto.description,
-          category: createCultureContentDto.category,
-          // Không còn tạo contentSections ở đây nữa
-        },
-      });
+  //   try {
+  //     // Removed transaction as it's no longer needed for this simplified operation
+  //     const createdCultureContent = await this.prisma.culture_content.create({
+  //       data: {
+  //         title: createCultureContentDto.title,
+  //         description: createCultureContentDto.description,
+  //         category: createCultureContentDto.category,
+  //         // Không còn tạo contentSections ở đây nữa
+  //       },
+  //     });
 
-      return this.apiResponse.success(
-        'Tạo Culture Content thành công',
-        createdCultureContent, // Chỉ trả về Culture Content chính
-      );
-    } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          const target =
-            (error.meta?.target as string[])?.join(', ') || 'trường nào đó';
-          throw new ConflictException(
-            this.apiResponse.error(`Giá trị cho ${target} đã tồn tại.`),
-          );
-        }
-        console.error('Prisma Error:', error);
-        throw new InternalServerErrorException(
-          this.apiResponse.error(
-            'Lỗi CSDL khi tạo Culture Content.',
-            error.message,
-          ),
-        );
-      }
+  //     return this.apiResponse.success(
+  //       'Tạo Culture Content thành công',
+  //       createdCultureContent, // Chỉ trả về Culture Content chính
+  //     );
+  //   } catch (error) {
+  //     if (error instanceof PrismaClientKnownRequestError) {
+  //       if (error.code === 'P2002') {
+  //         const target =
+  //           (error.meta?.target as string[])?.join(', ') || 'trường nào đó';
+  //         throw new ConflictException(
+  //           this.apiResponse.error(`Giá trị cho ${target} đã tồn tại.`),
+  //         );
+  //       }
+  //       console.error('Prisma Error:', error);
+  //       throw new InternalServerErrorException(
+  //         this.apiResponse.error(
+  //           'Lỗi CSDL khi tạo Culture Content.',
+  //           error.message,
+  //         ),
+  //       );
+  //     }
 
-      console.error('Unexpected Error:', error);
-      throw new InternalServerErrorException(
-        this.apiResponse.error(
-          'Đã xảy ra lỗi không mong muốn khi tạo Culture Content.',
-          error.message,
-        ),
-      );
-    }
-  }
+  //     console.error('Unexpected Error:', error);
+  //     throw new InternalServerErrorException(
+  //       this.apiResponse.error(
+  //         'Đã xảy ra lỗi không mong muốn khi tạo Culture Content.',
+  //         error.message,
+  //       ),
+  //     );
+  //   }
+  // }
 
   async findOne(id: string): Promise<ApiResponseDto> {
     try {
+
       const cultureContent = await this.prisma.culture_content.findUnique({
-        where: { id },
+        where: {
+          location_id: id,
+        },
         include: {
           Content_section: {
             include: {
@@ -89,7 +97,6 @@ export class CultureContentService {
           ),
         );
       }
-
       return this.apiResponse.success(
         'Lấy thông tin Culture Content thành công',
         cultureContent,
@@ -97,7 +104,7 @@ export class CultureContentService {
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
 
-      if (error instanceof Prisma.PrismaClientValidationError) {
+      if (error instanceof PrismaClientValidationError) {
         throw new BadRequestException(
           this.apiResponse.error(
             'ID không hợp lệ hoặc lỗi truy vấn.',
@@ -175,6 +182,41 @@ export class CultureContentService {
           'Lỗi khi lấy Culture Content mới nhất.',
           error.message,
         ),
+      );
+    }
+  }
+
+  async getCultureContentByImage(file: Express.Multer.File) {
+    try {
+      const IMAGE_SEARCH = this.configService.get<string>('IMAGE_SEARCH');
+
+      const formData = new FormData();
+      formData.append('file', file.buffer, {
+        filename: file.originalname,
+        contentType: file.mimetype,
+      });
+
+      const response = await lastValueFrom(
+        this.httpService.post(
+          IMAGE_SEARCH || '',
+          formData,
+          {
+            headers: {
+              ...formData.getHeaders(), 
+            },
+          }
+        )
+      );
+
+      const result = response.data;
+
+      return this.apiResponse.success('Image search successfully', 
+        result
+      );
+    } catch (error) {
+      console.error(error);
+      throw new InternalServerErrorException(
+        this.apiResponse.error('Error in image search', error)
       );
     }
   }

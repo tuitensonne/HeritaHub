@@ -8,7 +8,6 @@ import { MediaType } from './dto/create-post.dto';
 import { MediaService } from 'src/media/media.service';
 import { Neo4jService } from 'src/neo4j/neo4j.service';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
-import { spawn } from 'child_process';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 
@@ -33,37 +32,39 @@ export class PostService {
             content: createPostDto.content,
             created_at: new Date(),
             post_audience: createPostDto.post_audience,
-            user: { connect: { id: userId } }
-          }
+            user: { connect: { id: userId } },
+            location: createPostDto.location_id
+              ? { connect: { id: createPostDto.location_id } }
+              : undefined,
+          },
         });
-
-        const user = await prisma.user.update({ where: { id: userId }, data: { number_of_posts: {increment: 1}}})
-
+  
+        await prisma.user.update({
+          where: { id: userId },
+          data: { number_of_posts: { increment: 1 } },
+        });
+  
         const cloudinaryParams = {
           folder: `user_${userId}`,
           upload_preset: this.configService.get<string>('CLOUDINARY_UPLOAD_PRESET'),
           api_url: this.configService.get<string>('CLOUDINARY_API_URL'),
         };
-        if (createPostDto.location_id) {
-          await prisma.postLocation.create({
-            data: {
-              postId: post.id,
-              locationId: createPostDto.location_id,
-            }
-          })
-        }
-        await this.neo4jService.createPost(post.id)
-        return this.apiResonponse.success("Create post successfully" , {
+  
+        await this.neo4jService.createPost(post.id);
+  
+        return this.apiResonponse.success("Create post successfully", {
           post,
           cloudinaryParams,
-        })
-      }) 
-      return result
+        });
+      });
+  
+      return result;
     } catch (error) {
       console.error(error);
       throw error;
     }
   }
+  
 
   async addMediaToPost(postId: string, mediaUrl: string, mediaType: MediaType) {
     return this.apiResonponse.success(
@@ -81,8 +82,8 @@ export class PostService {
       where: { userId: id },
       skip: (page - 1) * limit,
       take: limit,
-      orderBy: { created_at: 'desc' } 
-    })
+      orderBy: { created_at: 'desc' },
+    });
     for (const post of posts) {
       post['isLike'] = await this.neo4jService.isLike(userId, post.id)
     }
@@ -185,6 +186,20 @@ export class PostService {
     }
   }
 
+  async getImageByPostId(postId: string) {
+    try {
+      const medias = await this.prisma.media.findMany({
+        where: {
+          postId: postId,
+        }
+      });
+      return this.apiResonponse.success("Get list of images succesfully", medias)
+    } catch (error) {
+      console.error(error);
+      throw new InternalServerErrorException(this.apiResonponse.error("Error in getting post images", error));
+    }
+  }
+ 
   async getCommentByPostId(postId: string, pageOffset: number, limit: number) {
     try {
       const comments = await this.prisma.comment.findMany({
@@ -263,5 +278,38 @@ export class PostService {
       console.error(err)
       throw new InternalServerErrorException(this.apiResonponse.error("Fail to delete a post", err))
     }
+  }
+
+  async getUserFeedPost(userId: string, page: number, limit: number) {
+    const followingFriends = await this.neo4jService.getFollowing(userId, userId);
+    
+    const followingIds = followingFriends.map(friend => friend.id);
+    const posts = await this.prisma.post.findMany({
+      where: {
+        userId: {
+          in: followingIds.length > 0 ? followingIds : ['dummy-id-123'],
+        }
+      },
+      include: {
+        user: {
+          select: {
+            username: true,
+            avatar_url: true
+          }
+        }
+      },
+      orderBy: { created_at: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+  
+    const postsWithUserInfo = posts.map(post => ({
+      ...post,
+      username: post.user.username,
+      avatar_url: post.user.avatar_url,
+      user: undefined 
+    }));
+  
+    return this.apiResonponse.success("Get Feed", postsWithUserInfo);
   }
 }
