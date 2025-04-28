@@ -294,35 +294,45 @@ export class PostService {
   
     const followingIds = [
       ...followingFriends.map(friend => friend.id),
-      userId, // thêm chính userId vào đây
+      userId, 
     ];
   
     const posts = await this.prisma.post.findMany({
       where: {
         userId: {
           in: followingIds.length > 0 ? followingIds : ['dummy-id-123'],
-        }
+        },
       },
       include: {
         user: {
           select: {
             username: true,
-            avatar_url: true
-          }
-        }
+            avatar_url: true,
+          },
+        },
       },
       orderBy: { created_at: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
     });
   
-    const postsWithUserInfo = posts.map(post => ({
+    const postsWithLikes = await Promise.all(
+      posts.map(async (post) => {
+        const isLike = await this.neo4jService.isLike(userId, post.id);
+        return {
+          ...post,
+          isLike,
+        };
+      })
+    );
+  
+    const postsWithUserInfo = postsWithLikes.map(post => ({
       ...post,
       username: post.user.username,
       avatar_url: post.user.avatar_url,
-      user: undefined
+      user: undefined, 
     }));
   
     return this.apiResonponse.success("Get Feed", postsWithUserInfo);
-  }  
+  }
 }
