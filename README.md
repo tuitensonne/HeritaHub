@@ -1,4 +1,4 @@
-<h1 style="color:#4CAF50;">🌏 HeritaHub - Kết nối con người với di sản</h1>
+<h1 style="color:#4CAF50;">🌏 HeritaHub - Mạng xã hội kết nối con người với di sản</h1>
 <p align="center">
   <img src="https://res.cloudinary.com/dxwez3taj/image/upload/v1745902264/logo_omrucy.png" alt="HeritaHub Logo" width="150" />
 </p>
@@ -28,6 +28,22 @@
 </div>
 <h2 style="color:#2196F3;">Giới thiệu</h2>
 <p><strong>HeritaHub</strong> là nền tảng mạng xã hội chuyên biệt dành cho cộng đồng yêu thích <strong>du lịch văn hóa</strong> 🏛️, <strong>khám phá di sản</strong> 🌿 và <strong>lịch sử</strong> 📜. Ứng dụng giúp người dùng dễ dàng tìm kiếm, chia sẻ và trải nghiệm các địa danh di sản theo cách sinh động, hiện đại và gắn kết cộng đồng.</p>
+<h2 style="color:#607D8B;">👥 Thành viên thực hiện</h2>
+<ul>
+  <li><strong>Triệu Tấn Đạt:</strong> Thị giác máy tính (tìm kiếm tài liệu di sản thông qua ảnh chụp). </li>
+  <li><strong>Đặng Huy Hoàng:</strong> Backend + Frontend + Database.</li>
+  <li><strong>Nguyễn Tấn Phát:</strong> AI NLP (Lọc bình luận toxic đa ngôn ngữ – tiếng Anh).</li>
+  <li><strong>Trần Nam Sơn:</strong> Backend + Frontend + Database.</li>
+  <li><strong>Nguyễn Nhật Trường:</strong> AI NLP (Lọc bình luận toxic đa ngôn ngữ – tiếng Việt).</li>
+</ul>
+
+<h2 style="color:#009688;">📌 Phân công công việc</h2>
+<ul>
+  <li>📱 Thiết kế và phát triển giao diện người dùng: <em>Trần Minh Khoa, Võ Thanh Hằng</em></li>
+  <li>🧠 AI xử lý hình ảnh & ngôn ngữ: <em>Lê Quang Duy, Phan Linh Chi</em></li>
+  <li>⚙️ Xây dựng API và hệ thống backend: <em>Nguyễn Gia Trường</em></li>
+  <li>🧪 Kiểm thử, demo, và hoàn thiện sản phẩm: <em>Tất cả thành viên</em></li>
+</ul>
 
 <h2 style="color:#E91E63;">✨ Chức năng chính</h2>
 <ul>
